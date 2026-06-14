@@ -99,11 +99,21 @@ class Config:
             for feature in self.FEATURE_REQUIREMENTS
         }
 
+    #: Substrings that mark a config key as secret-bearing. Anything matching
+    #: is masked by to_dict(). Covers every credential we actually store:
+    #: *_auth_token, *_ct0, *_csrf, *_cookie, *_sessdata, *_api_key, proxy
+    #: (proxies can embed user:pass), plus generic secret/session/credential.
+    _SENSITIVE_KEY_MARKERS = (
+        "key", "token", "password", "proxy",
+        "auth", "ct0", "csrf", "cookie", "sessdata",
+        "secret", "session", "credential",
+    )
+
     def to_dict(self) -> dict:
         """Return config as dict (masks sensitive values)."""
         masked = {}
         for k, v in self.data.items():
-            if any(s in k.lower() for s in ("key", "token", "password", "proxy")):
+            if any(s in k.lower() for s in self._SENSITIVE_KEY_MARKERS):
                 masked[k] = f"{str(v)[:8]}..." if v else None
             else:
                 masked[k] = v
