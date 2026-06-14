@@ -74,6 +74,26 @@ class TestConfig:
         assert masked["exa_api_key"] == "super-se..."
         assert masked["normal_setting"] == "visible"
 
+    def test_to_dict_masks_all_credential_keys(self, tmp_config):
+        """Every secret-bearing key we actually store must be masked, not just
+        those containing 'token'/'key'. Regression: twitter_ct0, *_cookie,
+        *_sessdata, *_csrf used to leak in full."""
+        secrets = {
+            "twitter_auth_token": "a" * 40,
+            "twitter_ct0": "b" * 160,
+            "xhs_cookie": "web_session=c123; a1=d456",
+            "bilibili_sessdata": "e" * 32,
+            "bilibili_csrf": "f" * 32,
+            "xueqiu_cookie": "xq_a_token=g789",
+            "proxy": "http://user:pass@1.2.3.4:8080",
+        }
+        for k, v in secrets.items():
+            tmp_config.set(k, v)
+        masked = tmp_config.to_dict()
+        for k, v in secrets.items():
+            assert masked[k] != v, f"{k} leaked its full value"
+            assert masked[k].endswith("..."), f"{k} not masked"
+
     def test_save_creates_file_with_restricted_permissions(self, tmp_path):
         import stat
         import sys
